@@ -1,6 +1,6 @@
-## Distri JS Executor
+## Distri JS Sandbox
 
-**Distri JS Executor** enables you to register function definitions and expose them as callable functions within a Deno JavaScript environment. This utility is designed to let LLMs (Large Language Models) generate plans in code format and execute them safely in a sandboxed environment by registering tool definitions as JavaScript-callable functions.
+**Distri JS Sandbox** enables you to register LLM function definitions and runs them in a sandbox. This utility is designed to let LLMs (Large Language Models) generate plans in code format and execute them primarily designed for distri Code Agent.
 
 ### ✨ Features
 - **LLM-Driven Execution:** Designed for scenarios where LLMs generate code plans that need to be executed in a controlled, sandboxed environment.
