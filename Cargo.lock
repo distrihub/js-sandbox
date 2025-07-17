@@ -870,6 +870,7 @@ dependencies = [
  "rustyscript",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
 ]
 

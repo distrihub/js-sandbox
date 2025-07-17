@@ -1,17 +1,19 @@
-#![allow(clippy::result_large_err)]
 use rustyscript::{
     worker::{InnerWorker, Worker},
     Error, Runtime,
 };
 
-use crate::{runtime::init_runtime, JsWorkerOptions};
+use crate::{runtime::init_runtime, JsWorkerError, JsWorkerOptions, JsWorkerResult};
 
 pub struct JsWorker(Worker<JsWorker>, JsWorkerOptions);
 
 impl JsWorker {
     /// Create a new instance of the worker
-    pub fn new(options: JsWorkerOptions) -> Result<Self, rustyscript::Error> {
-        Ok(Self(Worker::new(options.clone())?, options))
+    pub fn new(options: JsWorkerOptions) -> JsWorkerResult<Self> {
+        Ok(Self(
+            Worker::new(options.clone()).map_err(|e| JsWorkerError::JsError(e.to_string()))?,
+            options,
+        ))
     }
 
     // Make them available just by their names
@@ -28,17 +30,19 @@ impl JsWorker {
     }
 
     /// Execute a snippet of JS code on our threaded worker
-    pub fn execute<T>(&self, code: &str) -> Result<T, rustyscript::Error>
+    pub fn execute<T>(&self, code: &str) -> JsWorkerResult<T>
     where
         T: serde::de::DeserializeOwned,
     {
         let code = self.append_functions(code);
-        match self.0.send_and_await(JsWorkerMessage::Execute(code))? {
+        match self
+            .0
+            .send_and_await(JsWorkerMessage::Execute(code))
+            .map_err(|e| JsWorkerError::JsError(e.to_string()))?
+        {
             JsWorkerMessage::Value(v) => Ok(serde_json::from_value(v)?),
-            JsWorkerMessage::Error(e) => Err(e),
-            _ => Err(rustyscript::Error::Runtime(
-                "Unexpected response".to_string(),
-            )),
+            JsWorkerMessage::Error(e) => Err(JsWorkerError::JsError(e.to_string())),
+            _ => Err(JsWorkerError::Other("Unexpected response".to_string())),
         }
     }
 }

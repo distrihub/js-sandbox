@@ -1,8 +1,8 @@
-#![allow(clippy::result_large_err)]
 use rustyscript::Runtime;
 
 use crate::JsWorkerOptions;
 
+#[allow(clippy::result_large_err)]
 pub fn init_runtime(options: JsWorkerOptions) -> Result<Runtime, rustyscript::Error> {
     let mut runtime = Runtime::new(rustyscript::RuntimeOptions {
         timeout: options.timeout,
@@ -18,8 +18,10 @@ pub fn init_runtime(options: JsWorkerOptions) -> Result<Runtime, rustyscript::Er
             let executor = executor.clone();
             let args = args.to_vec();
             Box::pin(async move {
-                let output = executor.execute(&name, args).await?;
-                Ok::<_, rustyscript::Error>(output)
+                executor
+                    .execute(&name, args)
+                    .await
+                    .map_err(|e| rustyscript::Error::Runtime(e.to_string()))
             })
         })?;
     }

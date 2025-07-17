@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use rustyscript::Error;
-
-use crate::{FunctionDefinition, JsExecutor, JsWorker, JsWorkerOptions};
+use crate::{
+    FunctionDefinition, JsExecutor, JsWorker, JsWorkerError, JsWorkerOptions, JsWorkerResult,
+};
 use serde_json::Value;
 
 #[derive(Debug, Clone, Default)]
@@ -14,15 +14,14 @@ impl JsExecutor for EchoExecutor {
         &self,
         name: &str,
         args: Vec<serde_json::Value>,
-    ) -> Result<serde_json::Value, rustyscript::Error> {
+    ) -> JsWorkerResult<serde_json::Value> {
         let str = format!("[EchoJsExecutor]:Executing function: {name} with args: {args:?}");
         Ok(serde_json::Value::String(str))
     }
 }
 
 #[tokio::test]
-#[allow(clippy::result_large_err)]
-async fn test_echo_async() -> Result<(), Error> {
+async fn test_echo_async() -> Result<(), JsWorkerError> {
     let executor = EchoExecutor::default();
     let worker = JsWorker::new(JsWorkerOptions {
         timeout: std::time::Duration::from_secs(1),
@@ -33,7 +32,8 @@ async fn test_echo_async() -> Result<(), Error> {
             returns: Some("The echoed message".to_string()),
         }],
         executor: Arc::new(executor),
-    })?;
+    })
+    .map_err(|e| JsWorkerError::JsError(e.to_string()))?;
 
     let result: Value = worker.execute("echo('Hello, world!');").unwrap();
 
