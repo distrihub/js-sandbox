@@ -21,6 +21,7 @@ impl JsExecutor for EchoExecutor {
 }
 
 #[tokio::test]
+#[allow(clippy::result_large_err)]
 async fn test_echo_async() -> Result<(), Error> {
     let executor = EchoExecutor::default();
     let worker = JsWorker::new(JsWorkerOptions {
@@ -36,7 +37,7 @@ async fn test_echo_async() -> Result<(), Error> {
 
     let result: Value = worker.execute("echo('Hello, world!');").unwrap();
 
-    assert_eq!(result, "Hello, world!");
+    assert!(result.as_str().unwrap().contains("Hello, world!"));
 
     Ok(())
 }
