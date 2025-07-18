@@ -25,11 +25,5 @@ pub fn init_runtime(options: JsWorkerOptions) -> Result<Runtime, rustyscript::Er
             })
         })?;
     }
-
-    runtime.register_function("print", move |args| {
-        println!("{:?}", args);
-        Ok(serde_json::Value::Null)
-    })?;
-
     Ok(runtime)
 }

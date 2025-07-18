@@ -25,9 +25,24 @@ impl JsWorker {
                 f.name, f.name
             );
         });
-        str.push_str("globalThis.console = {log: rustyscript.functions['print'] } \n");
         str.push_str(code);
         str
+    }
+
+    pub fn wrap_async_block(&self, code: &str) -> String {
+        format!(
+            r#"
+(async () => {{
+    try {{
+        {}
+    }} catch (error) {{
+        console.log('Error in code execution:', error);
+        throw error;
+    }}
+}})()
+"#,
+            code
+        )
     }
 
     /// Execute a snippet of JS code on our threaded worker
@@ -36,6 +51,7 @@ impl JsWorker {
         T: serde::de::DeserializeOwned,
     {
         let code = self.append_functions(code);
+        let code = self.wrap_async_block(&code);
         let res = match self
             .0
             .send_and_await(JsWorkerMessage::Execute(code))
