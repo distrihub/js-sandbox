@@ -21,6 +21,7 @@ pub struct JsWorkerOptions {
     pub timeout: std::time::Duration,
     pub functions: Vec<FunctionDefinition>,
     pub executor: Arc<dyn JsExecutor>,
+    pub print_tx: Option<Arc<tokio::sync::mpsc::Sender<serde_json::Value>>>,
 }
 
 #[async_trait::async_trait]

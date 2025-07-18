@@ -25,6 +25,7 @@ impl JsWorker {
                 f.name, f.name
             );
         });
+        str.push_str("globalThis.console = {log: rustyscript.async_functions['print'] } \n");
         str.push_str(code);
         str
     }
