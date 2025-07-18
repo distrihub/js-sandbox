@@ -25,7 +25,7 @@ impl JsWorker {
                 f.name, f.name
             );
         });
-        str.push_str("globalThis.console = {log: rustyscript.async_functions['print'] } \n");
+        str.push_str("globalThis.console = {log: rustyscript.functions['print'] } \n");
         str.push_str(code);
         str
     }
@@ -36,7 +36,7 @@ impl JsWorker {
         T: serde::de::DeserializeOwned,
     {
         let code = self.append_functions(code);
-        match self
+        let res = match self
             .0
             .send_and_await(JsWorkerMessage::Execute(code))
             .map_err(|e| JsWorkerError::JsError(e.to_string()))?
@@ -44,7 +44,9 @@ impl JsWorker {
             JsWorkerMessage::Value(v) => Ok(serde_json::from_value(v)?),
             JsWorkerMessage::Error(e) => Err(JsWorkerError::JsError(e.to_string())),
             _ => Err(JsWorkerError::Other("Unexpected response".to_string())),
-        }
+        };
+
+        res
     }
 }
 

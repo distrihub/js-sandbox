@@ -26,18 +26,9 @@ pub fn init_runtime(options: JsWorkerOptions) -> Result<Runtime, rustyscript::Er
         })?;
     }
 
-    let print_tx = options.print_tx.clone();
-    runtime.register_async_function("print", move |args| {
-        if let Some(print_tx) = print_tx.clone() {
-            let print_tx = print_tx.clone();
-            let val = args.iter().next().cloned().unwrap_or_default();
-            Box::pin(async move {
-                let _ = print_tx.send(val).await;
-                Ok(serde_json::Value::Null)
-            })
-        } else {
-            Box::pin(async move { Ok(serde_json::Value::Null) })
-        }
+    runtime.register_function("print", move |args| {
+        println!("{:?}", args);
+        Ok(serde_json::Value::Null)
     })?;
 
     Ok(runtime)

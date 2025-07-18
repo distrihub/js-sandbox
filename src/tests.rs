@@ -4,7 +4,6 @@ use crate::{
     FunctionDefinition, JsExecutor, JsWorker, JsWorkerError, JsWorkerOptions, JsWorkerResult,
 };
 use serde_json::Value;
-use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, Default)]
 pub struct EchoExecutor {}
@@ -32,7 +31,6 @@ async fn test_echo_async() -> Result<(), JsWorkerError> {
             parameters: serde_json::json!({}),
             returns: Some("The echoed message".to_string()),
         }],
-        print_tx: None,
         executor: Arc::new(executor),
     })
     .map_err(|e| JsWorkerError::JsError(e.to_string()))?;
@@ -40,32 +38,6 @@ async fn test_echo_async() -> Result<(), JsWorkerError> {
     let result: Value = worker.execute("echo('Hello, world!');").unwrap();
 
     assert!(result.as_str().unwrap().contains("Hello, world!"));
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn print_test() -> Result<(), JsWorkerError> {
-    let executor = EchoExecutor::default();
-    let (tx, mut rx) = mpsc::channel::<Value>(1);
-    let worker = JsWorker::new(JsWorkerOptions {
-        timeout: std::time::Duration::from_secs(1),
-        functions: vec![],
-        executor: Arc::new(executor),
-        print_tx: Some(Arc::new(tx)),
-    })
-    .map_err(|e| JsWorkerError::JsError(e.to_string()))?;
-
-    let handle = tokio::spawn(async move {
-        let result = rx.recv().await.unwrap();
-        result
-    });
-    let result: Value = worker.execute("console.log(1);").unwrap();
-
-    assert!(result.is_null());
-
-    let result = handle.await.unwrap();
-    assert_eq!(result, serde_json::Value::Number(1.into()));
 
     Ok(())
 }
