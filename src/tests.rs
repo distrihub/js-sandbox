@@ -15,7 +15,16 @@ impl JsExecutor for EchoExecutor {
         name: &str,
         args: Vec<serde_json::Value>,
     ) -> JsWorkerResult<serde_json::Value> {
-        let str = format!("[EchoJsExecutor]:Executing function: {name} with args: {args:?}");
+        let str = format!("[EchoJsExecutor]:Executing async function: {name} with args: {args:?}");
+        Ok(serde_json::Value::String(str))
+    }
+
+    fn execute_sync(
+        &self,
+        name: &str,
+        args: Vec<serde_json::Value>,
+    ) -> JsWorkerResult<serde_json::Value> {
+        let str = format!("[EchoJsExecutor]:Executing sync function: {name} with args: {args:?}");
         Ok(serde_json::Value::String(str))
     }
 }
@@ -29,7 +38,7 @@ async fn test_echo_async() -> Result<(), JsWorkerError> {
             name: "echo".to_string(),
             description: Some("Echo a message".to_string()),
             parameters: serde_json::json!({}),
-            returns: Some("The echoed message".to_string()),
+            is_async: false,
         }],
         executor: Arc::new(executor),
     })

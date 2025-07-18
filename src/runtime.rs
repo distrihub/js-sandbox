@@ -13,17 +13,28 @@ pub fn init_runtime(options: JsWorkerOptions) -> Result<Runtime, rustyscript::Er
         let executor = options.executor.clone();
         let name = f.name.clone();
 
-        runtime.register_async_function(&name, move |args| {
-            let name = f.name.clone();
-            let executor = executor.clone();
-            let args = args.to_vec();
-            Box::pin(async move {
+        if f.is_async {
+            runtime.register_async_function(&name, move |args| {
+                let name = f.name.clone();
+                let executor = executor.clone();
+                let args = args.to_vec();
+                Box::pin(async move {
+                    executor
+                        .execute(&name, args)
+                        .await
+                        .map_err(|e| rustyscript::Error::Runtime(e.to_string()))
+                })
+            })?;
+        } else {
+            runtime.register_function(&name, move |args| {
+                let name = f.name.clone();
+                let executor = executor.clone();
+                let args = args.to_vec();
                 executor
-                    .execute(&name, args)
-                    .await
+                    .execute_sync(&name, args)
                     .map_err(|e| rustyscript::Error::Runtime(e.to_string()))
-            })
-        })?;
+            })?;
+        }
     }
     Ok(runtime)
 }

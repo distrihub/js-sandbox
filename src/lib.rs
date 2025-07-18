@@ -12,7 +12,7 @@ pub struct FunctionDefinition {
     pub name: String,
     pub description: Option<String>,
     pub parameters: serde_json::Value,
-    pub returns: Option<String>,
+    pub is_async: bool,
 }
 
 /// The runtime options for our worker
@@ -26,6 +26,11 @@ pub struct JsWorkerOptions {
 #[async_trait::async_trait]
 pub trait JsExecutor: Send + Sync {
     async fn execute(
+        &self,
+        name: &str,
+        args: Vec<serde_json::Value>,
+    ) -> JsWorkerResult<serde_json::Value>;
+    fn execute_sync(
         &self,
         name: &str,
         args: Vec<serde_json::Value>,

@@ -20,10 +20,15 @@ impl JsWorker {
     pub fn append_functions(&self, code: &str) -> String {
         let mut str = String::new();
         self.1.functions.iter().for_each(|f| {
-            str += &format!(
-                " let {} = rustyscript.async_functions['{}'];",
-                f.name, f.name
-            );
+            let line = if f.is_async {
+                format!(
+                    " let {} = rustyscript.async_functions['{}'];",
+                    f.name, f.name
+                )
+            } else {
+                format!(" let {} = rustyscript.functions['{}'];", f.name, f.name)
+            };
+            str += &line;
         });
         str.push_str(code);
         str
