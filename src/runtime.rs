@@ -6,6 +6,7 @@ use crate::JsWorkerOptions;
 pub fn init_runtime(options: JsWorkerOptions) -> Result<Runtime, rustyscript::Error> {
     let mut runtime = Runtime::new(rustyscript::RuntimeOptions {
         timeout: options.timeout,
+        default_entrypoint: Some("default".to_string()),
         ..Default::default()
     })?;
 

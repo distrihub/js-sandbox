@@ -1,6 +1,6 @@
 use rustyscript::{
     worker::{InnerWorker, Worker},
-    Error, Runtime,
+    Error, Runtime, Module,
 };
 
 use crate::{runtime::init_runtime, JsWorkerError, JsWorkerOptions, JsWorkerResult};
@@ -50,16 +50,14 @@ impl JsWorker {
         )
     }
 
-    /// Execute a snippet of JS code on our threaded worker
+    /// Execute a snippet of JS/TS code on our threaded worker
     pub fn execute<T>(&self, code: &str) -> JsWorkerResult<T>
     where
         T: serde::de::DeserializeOwned,
     {
-        let code = self.append_functions(code);
-        let code = self.wrap_async_block(&code);
         let res = match self
             .0
-            .send_and_await(JsWorkerMessage::Execute(code))
+            .send_and_await(JsWorkerMessage::Execute(code.to_string()))
             .map_err(|e| JsWorkerError::JsError(e.to_string()))?
         {
             JsWorkerMessage::Value(v) => Ok(serde_json::from_value(v)?),
@@ -68,6 +66,36 @@ impl JsWorker {
         };
 
         res
+    }
+    fn ensure_return_last_expression(code: &str) -> String {
+        let lines: Vec<&str> = code.trim().lines().collect();
+        if lines.is_empty() {
+            return code.to_string();
+        }
+
+        let mut result = String::new();
+        for (i, line) in lines.iter().enumerate() {
+            if i == lines.len() - 1 && !line.trim().is_empty() {
+                let trimmed = line.trim();
+                // If last line is an expression (ends with ;), convert to return
+                if trimmed.ends_with(';') && !trimmed.starts_with("return") 
+                   && !trimmed.starts_with("const") && !trimmed.starts_with("let") 
+                   && !trimmed.starts_with("var") && !trimmed.starts_with("function")
+                   && !trimmed.starts_with("class") && !trimmed.starts_with("interface")
+                   && !trimmed.starts_with("type") && !trimmed.starts_with("if")
+                   && !trimmed.starts_with("for") && !trimmed.starts_with("while")
+                   && !trimmed.starts_with("switch") {
+                    // Remove semicolon and add return
+                    let expr = &trimmed[..trimmed.len()-1];
+                    result.push_str(&format!("return {};\n", expr));
+                } else {
+                    result.push_str(&format!("{}\n", line));
+                }
+            } else {
+                result.push_str(&format!("{}\n", line));
+            }
+        }
+        result
     }
 }
 
@@ -91,10 +119,33 @@ impl InnerWorker for JsWorker {
     /// Handle all possible queries
     fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> Self::Response {
         match query {
-            JsWorkerMessage::Execute(code) => match runtime.eval::<serde_json::Value>(&code) {
-                Ok(value) => JsWorkerMessage::Value(value),
-                Err(e) => JsWorkerMessage::Error(e),
-            },
+            JsWorkerMessage::Execute(code) => {
+                // Wrap user code in a module with default export, handling last expression
+                let processed_code = Self::ensure_return_last_expression(code);
+                let user_module_code = format!(
+                    r#"
+export default function main() {{
+    {}
+}}
+"#,
+                    processed_code
+                );
+                
+                // Create TypeScript module to enable transpilation
+                let user_module = Module::new("user_module.ts", &user_module_code);
+                
+                // Load the user module
+                match runtime.load_modules(&user_module, vec![]) {
+                    Ok(module_handle) => {
+                        // Call the main function from the loaded module
+                        match runtime.call_function(Some(&module_handle), "default", rustyscript::json_args![]) {
+                            Ok(value) => JsWorkerMessage::Value(value),
+                            Err(e) => JsWorkerMessage::Error(e),
+                        }
+                    }
+                    Err(e) => JsWorkerMessage::Error(e),
+                }
+            }
 
             JsWorkerMessage::Error(e) => JsWorkerMessage::Error(e),
             JsWorkerMessage::Value(v) => JsWorkerMessage::Value(v),
