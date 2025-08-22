@@ -4,7 +4,7 @@ version = "0.1.1"
 edition = "2021"
 
 [dependencies]
-rustyscript = { git = "https://github.com/rscarson/rustyscript.git", version = "0.11.0", default-features = false, features = [
+rustyscript = { git = "https://github.com/rscarson/rustyscript.git", version = "0.12.3", default-features = false, features = [
   "worker",
 ] }
 tokio = { version = "^1.39.0", features = ["full"] }
